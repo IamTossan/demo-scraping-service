@@ -12,6 +12,7 @@
 Potentially the Document table is expected to hold a lot of rows, so here's some remarks about this:
   - When a task is successfully complete, another async task is carried to remove old versions of the result (called Documents in the code) to free space and keep the table as small as possible
   - Indices have been added to speed up queries to Documents
+  - As of the current state of the project, it should be fairly easy to scale the server horizontally, such that each server is not overloaded with tasks which could impact the overall performance of servers due the single-threaded nature of javascript. A more robust solution would be to replace the cqrs transport with some external queue system (Nats, RabbitMQ, ...)
   - Before thinking about technical solutions such as caching, table partitioning and so on, deeper analysis of use cases and read patterns can help finding optimizations that matter, for example:
     - If users often read the most recent articles, or the ones he/she hasn't checked yet, we can cache the most recent documents (redis, memcache, ...), to avoid hitting too much the DB with thesame queries
     - If each user reads articles of one of few kinds, we can consider sharding to split the load between multiple instances, or maybe split between multiple tables, since the amount of rows directly impacts the indexing, getting data from memory and so on
