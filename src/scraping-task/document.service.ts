@@ -1,13 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import {
-  DataSource,
-  Equal,
-  In,
-  LessThanOrEqual,
-  Not,
-  Repository,
-} from 'typeorm';
+import { DataSource, In, Not, Repository } from 'typeorm';
 import { Document } from './entities/document.entity';
 import {
   ScrapingTask,
@@ -46,18 +39,19 @@ export class DocumentService {
           WHERE
             status = 'FINISHED'
           GROUP BY
-            targetDomain
+            "targetDomain"
         )
         SELECT
           *
         FROM
           document
         WHERE
-          taskId IN (SELECT id FROM latest_finished_tasks)
+          "taskId" IN (SELECT id FROM latest_finished_tasks)
           ${domain ? `AND title RLIKE \'${domain.join('|')}\'` : ''}
         ORDER BY
-          publishedAt DESC
-        ${limit ? `LIMIT ${skip ? `${skip},` : ''}${limit}` : ''}
+          "publishedAt" DESC
+        ${limit ? `LIMIT ${limit}` : ''}
+        ${skip ? `OFFSET ${skip}` : ''}
         ;
       `,
     );
