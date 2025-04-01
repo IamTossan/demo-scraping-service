@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CqrsModule, EventBus } from '@nestjs/cqrs';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -19,7 +18,6 @@ import * as Joi from 'joi';
         POSTGRES_DATABASE: Joi.string().required(),
       }),
     }),
-    CqrsModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -31,7 +29,7 @@ import * as Joi from 'joi';
         database: configService.get('POSTGRES_DATABASE'),
         autoLoadEntities: true,
         synchronize: true,
-        logging: ['query'],
+        // logging: ['query'],
       }),
       inject: [ConfigService],
     }),
@@ -40,10 +38,4 @@ import * as Joi from 'joi';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {
-  constructor(private eventBus: EventBus) {
-    this.eventBus.subscribe((event) =>
-      console.log('event was published: ', event),
-    );
-  }
-}
+export class AppModule {}

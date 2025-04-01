@@ -7,19 +7,28 @@ import { DocumentController } from './document.controller';
 import { DocumentService } from './document.service';
 import { ScrapingTask } from './entities/scraping-task.entity';
 import { Document } from './entities/document.entity';
-import { ScrapeTaskRequestHandler } from './handlers/scrape-task-request.handler';
-import { ScrapingTaskCreatedHandler } from './handlers/scraping-task-created.handler';
-import { ScrapingTaskFinishedHandler } from './handlers/scraping-task-finished.handler';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ScrapingTask, Document])],
-  controllers: [ScrapingTaskController, DocumentController],
-  providers: [
-    ScrapingTaskService,
-    DocumentService,
-    ScrapeTaskRequestHandler,
-    ScrapingTaskCreatedHandler,
-    ScrapingTaskFinishedHandler,
+  imports: [
+    ClientsModule.registerAsync([
+      {
+        imports: [ConfigModule],
+        name: 'NATS_SERVICE',
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.NATS,
+          options: {
+            queue: 'scraping_dev',
+            servers: ['nats://localhost:4222'],
+          },
+        }),
+        inject: [ConfigService],
+      },
+    ]),
+    TypeOrmModule.forFeature([ScrapingTask, Document]),
   ],
+  controllers: [ScrapingTaskController, DocumentController],
+  providers: [ScrapingTaskService, DocumentService],
 })
 export class ScrapingTaskModule {}

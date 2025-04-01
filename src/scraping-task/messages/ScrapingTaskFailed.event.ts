@@ -1,6 +1,6 @@
 export class ScrapingTaskFailedEvent {
   constructor(
-    public readonly taskId: number,
+    public readonly taskId: string,
     public readonly error: string,
-  ) { }
+  ) {}
 }
