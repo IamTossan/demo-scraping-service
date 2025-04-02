@@ -11,6 +11,7 @@ import { InvoiceExtract } from './entities/invoice-extract';
 import { InvoiceService } from './invoice.service';
 import { MistralaiService } from './mistralai.service';
 import { Invoice } from './entities/invoice.entity';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -29,6 +30,8 @@ export class InvoiceController {
     return this.invoiceService.findAll();
   }
 
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ description: 'An invoice file to upload, in pdf format' })
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async getData(@UploadedFile() file: Express.Multer.File): Promise<{
