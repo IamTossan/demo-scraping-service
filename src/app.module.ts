@@ -4,6 +4,10 @@ import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScrapingTaskModule } from './scraping-task/scraping-task.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import {
+  InvoiceEnvValidationSchema,
+  InvoiceModule,
+} from './invoice/invoice.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -16,6 +20,7 @@ import * as Joi from 'joi';
         POSTGRES_USERNAME: Joi.string().required(),
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DATABASE: Joi.string().required(),
+        ...InvoiceEnvValidationSchema,
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -34,6 +39,7 @@ import * as Joi from 'joi';
       inject: [ConfigService],
     }),
     ScrapingTaskModule,
+    InvoiceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
