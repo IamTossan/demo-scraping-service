@@ -19,7 +19,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.NATS,
           options: {
-            queue: 'scraping_dev',
             servers: ['nats://localhost:4222'],
           },
         }),

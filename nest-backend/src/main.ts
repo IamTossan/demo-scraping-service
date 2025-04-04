@@ -11,7 +11,7 @@ async function bootstrap() {
   app.connectMicroservice<NatsOptions>(
     {
       transport: Transport.NATS,
-      options: { servers: ['nats://localhost:4222'] },
+      options: { servers: ['nats://localhost:4222'], queue: 'scraping_dev' },
     },
     { inheritAppConfig: true },
   );
