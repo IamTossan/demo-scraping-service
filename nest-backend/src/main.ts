@@ -17,7 +17,14 @@ async function bootstrap() {
   );
 
   app.set('query parser', 'extended');
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: false,
+      transformOptions: {
+        exposeUnsetFields: false,
+      },
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')

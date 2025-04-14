@@ -1,7 +1,9 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -12,6 +14,7 @@ import { InvoiceService } from './invoice.service';
 import { MistralaiService } from './mistralai.service';
 import { Invoice } from './entities/invoice.entity';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -28,6 +31,15 @@ export class InvoiceController {
   @Get()
   async findAll(): Promise<Invoice[]> {
     return this.invoiceService.findAll();
+  }
+
+  @Patch('/:id')
+  async updateById(
+    @Param('id') id: string,
+    @Body() payload: UpdateInvoiceDto,
+  ): Promise<{ message: string }> {
+    await this.invoiceService.updateById(id, payload);
+    return { message: 'ok' };
   }
 
   @ApiConsumes('multipart/form-data')

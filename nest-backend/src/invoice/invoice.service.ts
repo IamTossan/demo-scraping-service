@@ -18,6 +18,13 @@ export class InvoiceService {
     return this.invoiceRepository.save(newInvoice);
   }
 
+  async updateById(
+    id: string,
+    payload: Partial<Omit<Invoice, 'fileName' | 'fileContent'>>,
+  ) {
+    await this.invoiceRepository.update({ id }, payload);
+  }
+
   async findAll(): Promise<Invoice[]> {
     return this.invoiceRepository.find();
   }

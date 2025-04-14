@@ -1,10 +1,11 @@
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, json, Link, UIMatch, useLoaderData } from "@remix-run/react";
+import { Form, Link, redirect, UIMatch, useLoaderData } from "@remix-run/react";
 import { Buffer } from "buffer";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "~/components/Header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import type { Invoice } from "~/types/invoice";
 
 export const loader = async ({
@@ -20,10 +21,22 @@ export const loader = async ({
   return { invoice };
 };
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const payload = await request.formData();
-  // update invoice + redirect to home
-  return json({ message: "ok" });
+export const action = async ({ request, params }: ActionFunctionArgs) => {
+  const { id } = params;
+  const body = await request.formData();
+
+  const payload = Object.fromEntries(body);
+  Object.keys(payload).forEach((k) => {
+    if (payload[k] === "") {
+      delete payload[k];
+    }
+  });
+  await fetch(`http://localhost:3000/invoice/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return redirect("/");
 };
 
 export const handle = {
@@ -35,6 +48,7 @@ export const handle = {
 export default function Invoice() {
   const { invoice } = useLoaderData<typeof loader>();
   const [file, setFile] = useState<string>();
+  const formRef = useRef(null);
 
   useEffect(() => {
     setFile(
@@ -42,24 +56,56 @@ export default function Invoice() {
     );
   }, [invoice]);
 
+  const resetForm = () => {
+    if (!formRef.current) {
+      return;
+    }
+    formRef.current.elements.supplier.value = invoice.supplier;
+    formRef.current.elements.description.value = invoice.description;
+  };
+
   return (
     <div className="flex h-screen flex-col items-center justify-start gap-4">
       <Header />
       <div className="flex h-full w-full justify-between gap-4 p-4">
-        <div className="w-1/2">
+        <div className="w-2/3 max-w-5xl">
           <object data={file} type="application/pdf" width="100%" height="100%">
             <p>PDF could not be loaded.</p>
           </object>
         </div>
-        <div className="w-1/2">
-          <Form method="patch">
-            <Input
-              type="text"
-              name="description"
-              placeholder={invoice.description}
-            />
+        <div className="w-1/3">
+          <Form
+            className="flex flex-col items-center h-full gap-4 px-8 py-4 border"
+            method="patch"
+            ref={formRef}
+          >
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="supplier">Fournisseur</Label>
+              <Input
+                className="text-right"
+                type="text"
+                id="supplier"
+                name="supplier"
+                placeholder={invoice.supplier}
+              />
+            </div>
+            <div className="grid w-full max-w-sm items-center gap-1.5">
+              <Label htmlFor="description">Nature de la dépense</Label>
+              <Input
+                className="text-right"
+                type="text"
+                id="description"
+                name="description"
+                placeholder={invoice.description}
+              />
+            </div>
 
-            <Button type="submit">Update</Button>
+            <div className="flex self-end gap-2">
+              <Button onClick={resetForm} variant="secondary" type="reset">
+                Reset
+              </Button>
+              <Button type="submit">Update</Button>
+            </div>
           </Form>
         </div>
       </div>
