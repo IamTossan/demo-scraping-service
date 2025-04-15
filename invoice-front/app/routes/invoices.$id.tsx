@@ -67,13 +67,13 @@ export default function Invoice() {
   return (
     <div className="flex h-screen flex-col items-center justify-start gap-4">
       <Header />
-      <div className="flex h-full w-full justify-between gap-4 p-4">
-        <div className="w-2/3 max-w-5xl">
+      <div className="flex h-full w-full justify-around gap-4 p-4">
+        <div className="w-2/3 max-w-5xl justify-start">
           <object data={file} type="application/pdf" width="100%" height="100%">
             <p>PDF could not be loaded.</p>
           </object>
         </div>
-        <div className="w-1/3">
+        <div className="w-1/3 max-w-md">
           <Form
             className="flex flex-col items-center h-full gap-4 px-8 py-4 border"
             method="patch"
