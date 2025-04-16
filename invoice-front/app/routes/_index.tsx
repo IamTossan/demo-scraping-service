@@ -1,10 +1,12 @@
 import { type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import { useEffect, useState } from "react";
 import { CSVLink } from "react-csv";
 import Header from "~/components/Header";
 import { DataTable } from "~/components/InvoiceTable";
 import { columns } from "~/components/InvoiceTable/columns";
 import { Button } from "~/components/ui/button";
+import { useSupabase } from "~/supabase.context";
 import { Invoice } from "~/types/invoice";
 
 export const meta: MetaFunction = () => {
@@ -33,10 +35,29 @@ const CSV_HEADERS = [
 
 export default function Index() {
   const loadedInvoices = useLoaderData<typeof loader>();
+  const supabase = useSupabase();
+  const [invoices, setInvoices] = useState(() =>
+    loadedInvoices.map(({ fileContent, ...rest }) => ({
+      ...rest,
+    })),
+  );
 
-  const invoices = loadedInvoices.map(({ fileContent, ...rest }) => ({
-    ...rest,
-  }));
+  useEffect(() => {
+    if (!supabase) return;
+
+    supabase
+      .channel("schema-db-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "invoice" },
+        (p) => {
+          const { fileContent, ...rest } = p.new as Invoice;
+          setInvoices((invoices) => [...invoices, { ...rest }]);
+        },
+      )
+      .subscribe();
+  }, []);
+
   return (
     <div className="flex h-screen flex-col items-center justify-start  gap-4">
       <Header />

@@ -1,15 +1,20 @@
+import type { LinksFunction } from "@remix-run/node";
 import {
+  json,
   Link,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import { createBrowserClient } from "@supabase/ssr";
+
+import { Toaster } from "./components/ui/sonner";
+import { SupabaseProvider } from "./supabase.context";
 
 import "./tailwind.css";
-import { Toaster } from "./components/ui/sonner";
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -23,6 +28,15 @@ export const links: LinksFunction = () => [
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
 ];
+
+export const loader = async () => {
+  return json({
+    ENV: {
+      SUPABASE_URL: process.env.SUPABASE_URL as string,
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY as string,
+    },
+  });
+};
 
 export const handle = {
   breadcrumb: () => <Link to="/">Home</Link>,
@@ -48,5 +62,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const loaderData = useLoaderData<typeof loader>();
+
+  const supabase = createBrowserClient(
+    loaderData.ENV.SUPABASE_URL,
+    loaderData.ENV.SUPABASE_ANON_KEY,
+  );
+
+  return (
+    <SupabaseProvider supabase={supabase}>
+      <Outlet />
+    </SupabaseProvider>
+  );
 }
