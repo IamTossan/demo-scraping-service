@@ -2,7 +2,6 @@ import { type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { CSVLink } from "react-csv";
-import Header from "~/components/Header";
 import { DataTable } from "~/components/InvoiceTable";
 import { columns } from "~/components/InvoiceTable/columns";
 import { Button } from "~/components/ui/button";
@@ -58,21 +57,20 @@ export default function Index() {
       .subscribe();
   }, []);
 
+  const filename = `export_factures_${new Date().toISOString()}.csv`;
   return (
-    <div className="flex h-screen flex-col items-center justify-start  gap-4">
-      <Header />
-      <div className="flex flex-col items-center justify-between h-auto w-full gap-2 px-4">
-        <Button className="self-end">
-          <CSVLink
-            data={invoices}
-            headers={CSV_HEADERS}
-            filename={`export_factures_${new Date().toISOString()}`}
-          >
-            Exporter en fichier csv
-          </CSVLink>
-        </Button>
-        <DataTable className="w-full mx-4" columns={columns} data={invoices} />
-      </div>
+    <div className="flex flex-col items-center justify-between h-auto w-full gap-2 px-4">
+      <Button className="self-end">
+        <CSVLink
+          data={invoices}
+          headers={CSV_HEADERS}
+          filename={filename}
+          suppressHydrationWarning={true}
+        >
+          Exporter en fichier csv
+        </CSVLink>
+      </Button>
+      <DataTable className="w-full mx-4" columns={columns} data={invoices} />
     </div>
   );
 }

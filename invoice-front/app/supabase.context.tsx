@@ -10,7 +10,7 @@ type ProviderProps = {
 const context = createContext<SupabaseClient | undefined>(undefined);
 
 export function useSupabase() {
-  return useContext(context);
+  return useContext(context)!;
 }
 
 export function SupabaseProvider({ supabase, children }: ProviderProps) {
