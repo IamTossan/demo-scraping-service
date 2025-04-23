@@ -39,7 +39,7 @@ export class InvoiceController {
   }
 
   @Get()
-  async findAllByUserId(): Promise<Invoice[]> {
+  async findAllByUserId(@Req() req: Request): Promise<Invoice[]> {
     const userId = req.user!.sub;
     return this.invoiceService.findAllByUserId(userId);
   }

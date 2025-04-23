@@ -1,5 +1,7 @@
+import type { JWTPayload } from './auth.guard';
+
 declare namespace Express {
   export interface Request {
-    user?: { sub: string };
+    user?: JWTPayload;
   }
 }
