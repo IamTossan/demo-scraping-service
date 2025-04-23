@@ -9,15 +9,15 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import type { Request } from 'express';
+import { BlockStorageService } from './block-storage.service';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { InvoiceExtract } from './entities/invoice-extract';
+import { Invoice } from './entities/invoice.entity';
 import { InvoiceService } from './invoice.service';
 import { MistralaiService } from './mistralai.service';
-import { Invoice } from './entities/invoice.entity';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { UpdateInvoiceDto } from './dto/update-invoice.dto';
-import { BlockStorageService } from './block-storage.service';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -59,7 +59,7 @@ export class InvoiceController {
   @UseInterceptors(FileInterceptor('file'))
   async getData(
     @UploadedFile() file: Express.Multer.File,
-    @Req() req: Request<{ user: { sub: string } }>,
+    @Req() req: Request,
   ): Promise<{
     message: InvoiceExtract;
   }> {
