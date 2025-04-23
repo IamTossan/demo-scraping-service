@@ -5,9 +5,11 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InvoiceExtract } from './entities/invoice-extract';
 import { InvoiceService } from './invoice.service';
@@ -15,22 +17,31 @@ import { MistralaiService } from './mistralai.service';
 import { Invoice } from './entities/invoice.entity';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
+import { BlockStorageService } from './block-storage.service';
 
 @Controller('invoice')
 export class InvoiceController {
   constructor(
     private readonly mistralaiService: MistralaiService,
     private readonly invoiceService: InvoiceService,
+    private readonly blockStorageService: BlockStorageService,
   ) {}
 
   @Get('/:id')
-  async findOne(@Param('id') id: string): Promise<Invoice> {
-    return this.invoiceService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+  ): Promise<Invoice & { signedUrl: string }> {
+    const invoice = await this.invoiceService.findOne(id);
+    const signedUrl = await this.blockStorageService.getSignedUrl(
+      invoice.filePath,
+    );
+    return { ...invoice, signedUrl };
   }
 
   @Get()
-  async findAll(): Promise<Invoice[]> {
-    return this.invoiceService.findAll();
+  async findAllByUserId(): Promise<Invoice[]> {
+    const userId = req.user!.sub;
+    return this.invoiceService.findAllByUserId(userId);
   }
 
   @Patch('/:id')
@@ -46,15 +57,21 @@ export class InvoiceController {
   @ApiBody({ description: 'An invoice file to upload, in pdf format' })
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  async getData(@UploadedFile() file: Express.Multer.File): Promise<{
+  async getData(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request<{ user: { sub: string } }>,
+  ): Promise<{
     message: InvoiceExtract;
   }> {
+    const userId = req.user!.sub;
+    const filePath = await this.blockStorageService.upload(file);
     const signedUrl = await this.mistralaiService.uploadFile(file.buffer);
     const extract = await this.mistralaiService.processFile(signedUrl);
     await this.invoiceService.create({
       ...extract,
       fileName: file.originalname,
-      fileContent: file.buffer,
+      filePath,
+      user: { id: userId },
     });
     return {
       message: extract,

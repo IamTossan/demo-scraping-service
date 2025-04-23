@@ -1,10 +1,11 @@
-import { type MetaFunction } from "@remix-run/node";
+import { LoaderFunctionArgs, type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { CSVLink } from "react-csv";
 import { DataTable } from "~/components/InvoiceTable";
 import { columns } from "~/components/InvoiceTable/columns";
 import { Button } from "~/components/ui/button";
+import { getSupabaseServerClient } from "~/lib/supabase-server";
 import { useSupabase } from "~/supabase.context";
 import { Invoice } from "~/types/invoice";
 
@@ -15,8 +16,24 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader = async (): Promise<Invoice[]> => {
-  const res = await fetch("http://localhost:3000/invoice");
+export const loader = async ({
+  request,
+}: LoaderFunctionArgs): Promise<Invoice[]> => {
+  const { supabase } = getSupabaseServerClient(
+    request.headers.get("Cookie") ?? "",
+  );
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+  if (error || !session) {
+    return [];
+  }
+  const res = await fetch("http://localhost:3000/invoice", {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
   return res.json();
 };
 
@@ -35,11 +52,7 @@ const CSV_HEADERS = [
 export default function Index() {
   const loadedInvoices = useLoaderData<typeof loader>();
   const supabase = useSupabase();
-  const [invoices, setInvoices] = useState(() =>
-    loadedInvoices.map(({ fileContent, ...rest }) => ({
-      ...rest,
-    })),
-  );
+  const [invoices, setInvoices] = useState(() => loadedInvoices);
 
   useEffect(() => {
     if (!supabase) return;
@@ -50,8 +63,7 @@ export default function Index() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "invoice" },
         (p) => {
-          const { fileContent, ...rest } = p.new as Invoice;
-          setInvoices((invoices) => [...invoices, { ...rest }]);
+          setInvoices((invoices) => [...invoices, { ...(p.new as Invoice) }]);
         },
       )
       .subscribe();

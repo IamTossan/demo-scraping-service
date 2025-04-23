@@ -7,6 +7,9 @@ import {
   InvoiceModule,
 } from './invoice/invoice.module';
 import * as Joi from 'joi';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthGuard } from './auth.guard';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -18,8 +21,14 @@ import * as Joi from 'joi';
         POSTGRES_USERNAME: Joi.string().required(),
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DATABASE: Joi.string().required(),
+        JWT_SECRET: Joi.string().required(),
         ...InvoiceEnvValidationSchema,
       }),
+    }),
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '60s' },
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -40,6 +49,6 @@ import * as Joi from 'joi';
     InvoiceModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [{ provide: APP_GUARD, useClass: AuthGuard }],
 })
 export class AppModule {}

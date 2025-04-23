@@ -26,11 +26,13 @@ import {
   BreadcrumbSeparator,
 } from "../ui/breadcrumb";
 import { timeout } from "~/lib/utils";
+import { useSupabase } from "~/supabase.context";
 
 export default function Header() {
   const fetcher = useFetcher();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const matches = useMatches();
+  const supabase = useSupabase();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -42,12 +44,30 @@ export default function Header() {
     await timeout(750);
     setIsDialogOpen(false);
 
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error || !session) {
+      toast.error("Erreur lors de l'envoi de la facture");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
-    await fetch("http://localhost:3000/invoice/upload", {
+    const res = await fetch("http://localhost:3000/invoice/upload", {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: formData,
     });
+
+    if (!res.ok) {
+      toast.error("Erreur lors de l'envoi de la facture");
+      return;
+    }
 
     toast.success("Facture envoyée");
   };

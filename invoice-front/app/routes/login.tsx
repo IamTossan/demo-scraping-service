@@ -41,7 +41,7 @@ export default function Login() {
       console.error("login error", error);
       toast.error(error.message);
     } else {
-      toast.info("Connection réussie");
+      toast.success("Connection réussie");
       return navigate("/");
     }
   };

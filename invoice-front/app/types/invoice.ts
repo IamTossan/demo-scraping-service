@@ -1,7 +1,7 @@
 export type Invoice = {
   id: string;
   filename: string;
-  fileContent: Buffer;
+  signedUrl: string;
   createdAt: string;
 
   invoiceDate: string;

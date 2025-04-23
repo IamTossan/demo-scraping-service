@@ -1,17 +1,32 @@
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { Form, Link, redirect, UIMatch, useLoaderData } from "@remix-run/react";
-import { Buffer } from "buffer";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { getSupabaseServerClient } from "~/lib/supabase-server";
 import type { Invoice } from "~/types/invoice";
 
 export const loader = async ({
   params,
+  request,
 }: LoaderFunctionArgs): Promise<{ invoice: Invoice }> => {
+  const { supabase } = getSupabaseServerClient(
+    request.headers.get("Cookie") ?? "",
+  );
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+  if (error || !session) {
+    throw new Response("Not Authorized", { status: 401 });
+  }
   const { id } = params;
-  const getInvoiceRes = await fetch(`http://localhost:3000/invoice/${id}`);
+  const getInvoiceRes = await fetch(`http://localhost:3000/invoice/${id}`, {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
 
   if (!getInvoiceRes.ok) throw new Response("Not Found", { status: 404 });
 
@@ -24,6 +39,17 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   const { id } = params;
   const body = await request.formData();
 
+  const { supabase } = getSupabaseServerClient(
+    request.headers.get("Cookie") ?? "",
+  );
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+  if (error || !session) {
+    throw new Response("Not Authorized", { status: 401 });
+  }
+
   const payload = Object.fromEntries(body);
   Object.keys(payload).forEach((k) => {
     if (payload[k] === "") {
@@ -32,7 +58,10 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   });
   await fetch(`http://localhost:3000/invoice/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
     body: JSON.stringify(payload),
   });
   return redirect("/");
@@ -46,14 +75,7 @@ export const handle = {
 
 export default function Invoice() {
   const { invoice } = useLoaderData<typeof loader>();
-  const [file, setFile] = useState<string>();
   const formRef = useRef(null);
-
-  useEffect(() => {
-    setFile(
-      `data:application/pdf;base64,${Buffer.from(invoice.fileContent.data).toString("base64")}`,
-    );
-  }, [invoice]);
 
   const resetForm = () => {
     if (!formRef.current) {
@@ -66,7 +88,12 @@ export default function Invoice() {
   return (
     <div className="flex h-full w-full justify-around gap-4 p-4">
       <div className="w-2/3 max-w-5xl justify-start">
-        <object data={file} type="application/pdf" width="100%" height="100%">
+        <object
+          data={invoice.signedUrl}
+          type="application/pdf"
+          width="100%"
+          height="100%"
+        >
           <p>PDF could not be loaded.</p>
         </object>
       </div>

@@ -12,7 +12,7 @@ export class InvoiceService {
   ) {}
 
   async create(
-    invoice: InvoiceExtract & Pick<Invoice, 'fileName' | 'fileContent'>,
+    invoice: InvoiceExtract & Pick<Invoice, 'fileName' | 'user' | 'filePath'>,
   ): Promise<Invoice> {
     const newInvoice = this.invoiceRepository.create(invoice);
     return this.invoiceRepository.save(newInvoice);
@@ -25,8 +25,8 @@ export class InvoiceService {
     await this.invoiceRepository.update({ id }, payload);
   }
 
-  async findAll(): Promise<Invoice[]> {
-    return this.invoiceRepository.find();
+  async findAllByUserId(userId: string): Promise<Invoice[]> {
+    return this.invoiceRepository.findBy({ user: { id: userId } });
   }
 
   async findOne(id: string): Promise<Invoice> {
