@@ -4,8 +4,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { NatsOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { otelSDK } from './tracing';
 
 async function bootstrap() {
+  otelSDK.start();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.connectMicroservice<NatsOptions>(

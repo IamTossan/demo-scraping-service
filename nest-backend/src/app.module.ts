@@ -22,6 +22,8 @@ import { APP_GUARD } from '@nestjs/core';
         POSTGRES_PASSWORD: Joi.string().required(),
         POSTGRES_DATABASE: Joi.string().required(),
         JWT_SECRET: Joi.string().required(),
+        OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().required(),
+        OTEL_SERVICE_NAME: Joi.string().required(),
         ...InvoiceEnvValidationSchema,
       }),
     }),
