@@ -1,5 +1,9 @@
 import { LoaderFunctionArgs, type MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import {
+  RealtimePostgresInsertPayload,
+  RealtimePostgresUpdatePayload,
+} from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import { CSVLink } from "react-csv";
 import { DataTable } from "~/components/InvoiceTable";
@@ -39,6 +43,7 @@ export const loader = async ({
 
 const CSV_HEADERS = [
   { label: "id", key: "id" },
+  { label: "status", key: "status" },
   { label: "date_enregistrement", key: "createdAt" },
   { label: "nom_fichier", key: "fileName" },
   { label: "date_facture", key: "invoiceDate" },
@@ -52,19 +57,40 @@ const CSV_HEADERS = [
 export default function Index() {
   const loadedInvoices = useLoaderData<typeof loader>();
   const supabase = useSupabase();
-  const [invoices, setInvoices] = useState(() => loadedInvoices);
+  const [invoices, setInvoices] = useState(() =>
+    loadedInvoices.reduce(
+      (acc, cur) => {
+        acc[cur.id] = cur;
+        return acc;
+      },
+      {} as Record<string, Invoice>,
+    ),
+  );
 
   useEffect(() => {
     if (!supabase) return;
 
+    const updateInvoices = (
+      p:
+        | RealtimePostgresInsertPayload<Invoice>
+        | RealtimePostgresUpdatePayload<Invoice>,
+    ) => {
+      setInvoices((invoices) => ({
+        ...invoices,
+        [p.new.id]: p.new as Invoice,
+      }));
+    };
     supabase
       .channel("schema-db-changes")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "invoice" },
-        (p) => {
-          setInvoices((invoices) => [...invoices, { ...(p.new as Invoice) }]);
-        },
+        updateInvoices,
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "invoice" },
+        updateInvoices,
       )
       .subscribe();
   }, []);
@@ -74,7 +100,7 @@ export default function Index() {
     <div className="flex flex-col items-center justify-between h-auto w-full gap-2 px-4">
       <Button className="self-end">
         <CSVLink
-          data={invoices}
+          data={Object.values(invoices)}
           headers={CSV_HEADERS}
           filename={filename}
           suppressHydrationWarning={true}
@@ -82,7 +108,11 @@ export default function Index() {
           Exporter en fichier csv
         </CSVLink>
       </Button>
-      <DataTable className="w-full mx-4" columns={columns} data={invoices} />
+      <DataTable
+        className="w-full h-auto mx-4 mb-4"
+        columns={columns}
+        data={Object.values(invoices)}
+      />
     </div>
   );
 }

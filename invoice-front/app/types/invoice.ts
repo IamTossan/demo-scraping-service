@@ -1,13 +1,14 @@
 export type Invoice = {
   id: string;
+  status: "CREATED" | "STARTED" | "FAILED" | "COMPLETED";
   filename: string;
   signedUrl: string;
   createdAt: string;
 
-  invoiceDate: string;
-  supplier: string;
-  description: string;
-  amountExclTax: number;
-  amountTotal: number;
-  amountTax: number;
+  invoiceDate: string | null;
+  supplier: string | null;
+  description: string | null;
+  amountExclTax: number | null;
+  amountTotal: number | null;
+  amountTax: number | null;
 };

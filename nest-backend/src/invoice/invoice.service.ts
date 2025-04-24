@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Invoice } from './entities/invoice.entity';
-import { InvoiceExtract } from './entities/invoice-extract';
 
 @Injectable()
 export class InvoiceService {
@@ -12,7 +11,7 @@ export class InvoiceService {
   ) {}
 
   async create(
-    invoice: InvoiceExtract & Pick<Invoice, 'fileName' | 'user' | 'filePath'>,
+    invoice: Pick<Invoice, 'id' | 'fileName' | 'user' | 'filePath'>,
   ): Promise<Invoice> {
     const newInvoice = this.invoiceRepository.create(invoice);
     return this.invoiceRepository.save(newInvoice);
@@ -20,7 +19,7 @@ export class InvoiceService {
 
   async updateById(
     id: string,
-    payload: Partial<Omit<Invoice, 'fileName' | 'fileContent'>>,
+    payload: Partial<Omit<Invoice, 'id' | 'user' | 'fileName'>>,
   ) {
     await this.invoiceRepository.update({ id }, payload);
   }

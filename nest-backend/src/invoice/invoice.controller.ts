@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -14,10 +15,13 @@ import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { BlockStorageService } from './block-storage.service';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
-import { InvoiceExtract } from './entities/invoice-extract';
-import { Invoice } from './entities/invoice.entity';
+import { Invoice, InvoiceStatus } from './entities/invoice.entity';
 import { InvoiceService } from './invoice.service';
 import { MistralaiService } from './mistralai.service';
+import { ClientProxy, EventPattern } from '@nestjs/microservices';
+import { InvoiceUploadedEvent } from './messages/InvoiceUploadedEvent';
+import { Public } from 'src/auth.guard';
+import { InvoiceOcrFinishedEvent } from './messages/InvoiceOcrFinishedEvent';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -25,6 +29,7 @@ export class InvoiceController {
     private readonly mistralaiService: MistralaiService,
     private readonly invoiceService: InvoiceService,
     private readonly blockStorageService: BlockStorageService,
+    @Inject('NATS_SERVICE') private readonly natsClient: ClientProxy,
   ) {}
 
   @Get('/:id')
@@ -61,20 +66,42 @@ export class InvoiceController {
     @UploadedFile() file: Express.Multer.File,
     @Req() req: Request,
   ): Promise<{
-    message: InvoiceExtract;
+    message: string;
   }> {
     const userId = req.user!.sub;
     const filePath = await this.blockStorageService.upload(file);
-    const signedUrl = await this.mistralaiService.uploadFile(file.buffer);
-    const extract = await this.mistralaiService.processFile(signedUrl);
+    const event = new InvoiceUploadedEvent({ userId, filePath });
+    this.natsClient.emit(InvoiceUploadedEvent.event_name, event);
+
     await this.invoiceService.create({
-      ...extract,
+      id: event.invoiceId,
       fileName: file.originalname,
       filePath,
       user: { id: userId },
     });
     return {
-      message: extract,
+      message: 'File uploaded successfully',
     };
+  }
+
+  @Public()
+  @EventPattern(InvoiceUploadedEvent.event_name)
+  async handleInvoiceUploadedEvent(event: InvoiceUploadedEvent) {
+    await this.invoiceService.updateById(event.invoiceId, {
+      status: InvoiceStatus.STARTED,
+    });
+
+    const blob = await this.blockStorageService.download(event.filePath);
+    const signedUrl = await this.mistralaiService.uploadFile(blob);
+    const extract = await this.mistralaiService.processFile(signedUrl);
+
+    await this.invoiceService.updateById(event.invoiceId, {
+      ...extract,
+      status: InvoiceStatus.COMPLETED,
+    });
+    this.natsClient.emit(
+      InvoiceOcrFinishedEvent.event_name,
+      new InvoiceOcrFinishedEvent(event.invoiceId),
+    );
   }
 }

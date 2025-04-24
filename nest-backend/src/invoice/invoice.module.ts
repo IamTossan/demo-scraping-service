@@ -6,6 +6,8 @@ import { InvoiceService } from './invoice.service';
 import { InvoiceController } from './invoice.controller';
 import { MistralaiService } from './mistralai.service';
 import { BlockStorageService } from './block-storage.service';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 export const InvoiceEnvValidationSchema = {
   MISTRAL_API_KEY: Joi.string().required(),
@@ -14,7 +16,22 @@ export const InvoiceEnvValidationSchema = {
 };
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Invoice, User])],
+  imports: [
+    TypeOrmModule.forFeature([Invoice, User]),
+    ClientsModule.registerAsync([
+      {
+        imports: [ConfigModule],
+        name: 'NATS_SERVICE',
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.NATS,
+          options: {
+            servers: [configService.get('NATS_URL')!],
+          },
+        }),
+        inject: [ConfigService],
+      },
+    ]),
+  ],
   providers: [MistralaiService, InvoiceService, BlockStorageService],
   controllers: [InvoiceController],
 })

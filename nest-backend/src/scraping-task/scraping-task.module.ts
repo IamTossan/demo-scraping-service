@@ -19,7 +19,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.NATS,
           options: {
-            servers: ['nats://localhost:4222'],
+            servers: [configService.get('NATS_URL')!],
           },
         }),
         inject: [ConfigService],

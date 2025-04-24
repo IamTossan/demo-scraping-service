@@ -11,6 +11,25 @@ export const columns: ColumnDef<Invoice>[] = [
     header: "Nom du fichier",
   },
   {
+    accessorKey: "status",
+    header: "Statut",
+    cell: ({ row }) => {
+      switch (row.original.status) {
+        case "CREATED":
+          return <>Créé</>;
+        case "STARTED":
+          return <>En cours</>;
+        case "COMPLETED":
+          return <>Terminé</>;
+        case "FAILED":
+          return <>Erreur</>;
+        default:
+          return <>{row.original.status}</>;
+      }
+    },
+  },
+
+  {
     accessorKey: "createdAt",
     header: "Date de création",
     cell: ({ row }) => {
@@ -33,6 +52,7 @@ export const columns: ColumnDef<Invoice>[] = [
     header: "Date de facturation",
     cell: ({ row }) => {
       const invoiceDate = row.original.invoiceDate;
+      if (!invoiceDate) return <></>;
       return (
         <>
           {new Date(invoiceDate).toLocaleString("fr-FR", {
@@ -51,6 +71,7 @@ export const columns: ColumnDef<Invoice>[] = [
     header: "Montant HT",
     cell: ({ row }) => {
       const amountExclTax = row.original.amountExclTax;
+      if (!amountExclTax) return <></>;
       return <>{amountExclTax.toFixed(2)} €</>;
     },
   },
@@ -59,6 +80,7 @@ export const columns: ColumnDef<Invoice>[] = [
     header: "Montant TVA",
     cell: ({ row }) => {
       const amountTax = row.original.amountTax;
+      if (!amountTax) return <></>;
       return <>{amountTax.toFixed(2)} €</>;
     },
   },
@@ -67,6 +89,7 @@ export const columns: ColumnDef<Invoice>[] = [
     header: "Montant TTC",
     cell: ({ row }) => {
       const amountTotal = row.original.amountTotal;
+      if (!amountTotal) return <></>;
       return <>{amountTotal.toFixed(2)} €</>;
     },
   },

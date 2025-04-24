@@ -26,13 +26,13 @@ export class DocumentController {
   async onScrapingTaskCreated(event: ScrapingTaskCreatedEvent) {
     await this.documentService.scrapeTargetdomain(event);
     const finishedEvent = new ScrapingTaskFinishedEvent(event.taskId);
-    this.natsClient.emit(finishedEvent.event_name, finishedEvent);
+    this.natsClient.emit(ScrapingTaskFinishedEvent.event_name, finishedEvent);
   }
 
   @EventPattern('event.scraping_task_finished')
   async onScrapingTaskFinished(event: ScrapingTaskFinishedEvent) {
     await this.documentService.removeOldVersions(event.taskId);
     const removedEvent = new OldDocumentsRemovedEvent(event.taskId);
-    this.natsClient.emit(removedEvent.event_name, removedEvent);
+    this.natsClient.emit(OldDocumentsRemovedEvent.event_name, removedEvent);
   }
 }

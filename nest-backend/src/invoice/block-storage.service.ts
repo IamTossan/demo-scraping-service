@@ -27,6 +27,16 @@ export class BlockStorageService {
     return data.path;
   }
 
+  async download(path: string) {
+    const { data, error } = await this.client.storage
+      .from('invoices')
+      .download(path);
+    if (error) {
+      throw new Error(error.message);
+    }
+    return data;
+  }
+
   async getSignedUrl(path: string) {
     const { data, error } = await this.client.storage
       .from('invoices')

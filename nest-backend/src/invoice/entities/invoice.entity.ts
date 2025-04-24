@@ -13,6 +13,12 @@ export class User {
   id: string;
 }
 
+export enum InvoiceStatus {
+  CREATED = 'CREATED',
+  STARTED = 'STARTED',
+  FAILED = 'FAILED',
+  COMPLETED = 'COMPLETED',
+}
 @Entity()
 export class Invoice extends BaseEntity {
   @Column()
@@ -22,22 +28,29 @@ export class Invoice extends BaseEntity {
   @JoinColumn([{ name: 'userId', referencedColumnName: 'id' }])
   user: User;
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: InvoiceStatus,
+    default: InvoiceStatus.CREATED,
+  })
+  status: InvoiceStatus;
+
+  @Column({ nullable: true })
   invoiceDate: string;
 
-  @Column()
+  @Column({ nullable: true })
   supplier: string;
 
-  @Column()
+  @Column({ nullable: true })
   description: string;
 
-  @Column('float')
+  @Column('float', { nullable: true })
   amountExclTax: number;
 
-  @Column('float')
+  @Column('float', { nullable: true })
   amountTotal: number;
 
-  @Column('float')
+  @Column('float', { nullable: true })
   amountTax: number;
 
   @Column()

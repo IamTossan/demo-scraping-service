@@ -27,7 +27,10 @@ export class DocumentService {
       status: ScrapingTaskStatus.STARTED,
     });
     const scrapingStartedEvent = new ScrapingTaskStartedEvent(event.taskId);
-    this.natsClient.emit(scrapingStartedEvent.event_name, scrapingStartedEvent);
+    this.natsClient.emit(
+      ScrapingTaskStartedEvent.event_name,
+      scrapingStartedEvent,
+    );
 
     const $ = await cheerio.fromURL(event.targetDomain);
 

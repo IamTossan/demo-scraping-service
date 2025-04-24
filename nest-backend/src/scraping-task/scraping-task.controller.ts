@@ -14,18 +14,19 @@ export class ScrapingTaskController {
 
   @Post()
   create(@Body() createScrapingTaskDto: CreateScrapingTaskDto) {
-    const command = new CreateScrapingTaskCommand(createScrapingTaskDto);
-    this.natsClient.emit(command.event_name, command);
+    this.natsClient.emit(
+      CreateScrapingTaskCommand.event_name,
+      new CreateScrapingTaskCommand(createScrapingTaskDto),
+    );
   }
 
   @EventPattern('command.create_scraping_task')
   async onScrapingTaskrequested(command: CreateScrapingTaskCommand) {
     await this.scrapingTaskService.create(command);
-    const event = new ScrapingTaskCreatedEvent(
-      command.id,
-      command.targetDomain,
+    this.natsClient.emit(
+      ScrapingTaskCreatedEvent.event_name,
+      new ScrapingTaskCreatedEvent(command.id, command.targetDomain),
     );
-    this.natsClient.emit(event.event_name, event);
   }
 
   @Get()

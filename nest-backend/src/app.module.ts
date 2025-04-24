@@ -24,6 +24,7 @@ import { APP_GUARD } from '@nestjs/core';
         JWT_SECRET: Joi.string().required(),
         OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().required(),
         OTEL_SERVICE_NAME: Joi.string().required(),
+        NATS_URL: Joi.string().required(),
         ...InvoiceEnvValidationSchema,
       }),
     }),
