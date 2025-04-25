@@ -10,18 +10,19 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { ClientProxy, EventPattern } from '@nestjs/microservices';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { context, propagation } from '@opentelemetry/api';
 import type { Request } from 'express';
+import { Public } from 'src/auth.guard';
 import { BlockStorageService } from './block-storage.service';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { Invoice, InvoiceStatus } from './entities/invoice.entity';
 import { InvoiceService } from './invoice.service';
-import { MistralaiService } from './mistralai.service';
-import { ClientProxy, EventPattern } from '@nestjs/microservices';
-import { InvoiceUploadedEvent } from './messages/InvoiceUploadedEvent';
-import { Public } from 'src/auth.guard';
 import { InvoiceOcrFinishedEvent } from './messages/InvoiceOcrFinishedEvent';
+import { InvoiceUploadedEvent } from './messages/InvoiceUploadedEvent';
+import { MistralaiService } from './mistralai.service';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -70,7 +71,13 @@ export class InvoiceController {
   }> {
     const userId = req.user!.sub;
     const filePath = await this.blockStorageService.upload(file);
-    const event = new InvoiceUploadedEvent({ userId, filePath });
+    const tracingContext = {};
+    propagation.inject(context.active(), tracingContext);
+    const event = new InvoiceUploadedEvent({
+      userId,
+      filePath,
+      _meta: tracingContext,
+    });
     this.natsClient.emit(InvoiceUploadedEvent.event_name, event);
 
     await this.invoiceService.create({
@@ -84,9 +91,7 @@ export class InvoiceController {
     };
   }
 
-  @Public()
-  @EventPattern(InvoiceUploadedEvent.event_name)
-  async handleInvoiceUploadedEvent(event: InvoiceUploadedEvent) {
+  async _handleInvoiceUploadedEvent(event: InvoiceUploadedEvent) {
     await this.invoiceService.updateById(event.invoiceId, {
       status: InvoiceStatus.STARTED,
     });
@@ -102,6 +107,18 @@ export class InvoiceController {
     this.natsClient.emit(
       InvoiceOcrFinishedEvent.event_name,
       new InvoiceOcrFinishedEvent(event.invoiceId),
+    );
+  }
+
+  @Public()
+  @EventPattern(InvoiceUploadedEvent.event_name)
+  async handleInvoiceUploadedEvent(event: InvoiceUploadedEvent) {
+    const activeContext = propagation.extract(context.active(), event._meta);
+    await context.with(
+      activeContext,
+      this._handleInvoiceUploadedEvent.bind(this),
+      this,
+      event,
     );
   }
 }
