@@ -23,9 +23,12 @@ import { InvoiceService } from './invoice.service';
 import { InvoiceOcrFinishedEvent } from './messages/InvoiceOcrFinishedEvent';
 import { InvoiceUploadedEvent } from './messages/InvoiceUploadedEvent';
 import { MistralaiService } from './mistralai.service';
+import { LoggerWithOTEL } from 'src/logger';
 
 @Controller('invoice')
 export class InvoiceController {
+  private readonly logger = new LoggerWithOTEL(InvoiceController.name);
+
   constructor(
     private readonly mistralaiService: MistralaiService,
     private readonly invoiceService: InvoiceService,

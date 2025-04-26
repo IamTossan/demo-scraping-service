@@ -5,11 +5,14 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { NatsOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { otelSDK } from './tracing';
+import { LoggerWithOTEL } from './logger';
 
 async function bootstrap() {
   otelSDK.start();
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: new LoggerWithOTEL(process.env.OTEL_SERVICE_NAME!),
+  });
 
   app.connectMicroservice<NatsOptions>(
     {

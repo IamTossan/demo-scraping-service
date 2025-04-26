@@ -41,9 +41,15 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
+      '@opentelemetry/api-logs':
+        specifier: ^0.200.0
+        version: 0.200.0
       '@opentelemetry/auto-instrumentations-node':
         specifier: ^0.58.0
         version: 0.58.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@2.0.0(@opentelemetry/api@1.9.0))
+      '@opentelemetry/exporter-logs-otlp-http':
+        specifier: ^0.200.0
+        version: 0.200.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/exporter-metrics-otlp-grpc':
         specifier: ^0.200.0
         version: 0.200.0(@opentelemetry/api@1.9.0)
@@ -53,6 +59,9 @@ importers:
       '@opentelemetry/resources':
         specifier: ^2.0.0
         version: 2.0.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-logs':
+        specifier: ^0.200.0
+        version: 0.200.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-metrics':
         specifier: ^2.0.0
         version: 2.0.0(@opentelemetry/api@1.9.0)
