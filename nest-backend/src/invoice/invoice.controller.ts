@@ -16,14 +16,15 @@ import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { context, propagation } from '@opentelemetry/api';
 import type { Request } from 'express';
 import { Public } from 'src/auth.guard';
+import { LoggerWithOTEL } from 'src/logger';
 import { BlockStorageService } from './block-storage.service';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { Invoice, InvoiceStatus } from './entities/invoice.entity';
 import { InvoiceService } from './invoice.service';
+import { InvoiceOcrFailedEvent } from './messages/InvoiceOcrFailedEvent';
 import { InvoiceOcrFinishedEvent } from './messages/InvoiceOcrFinishedEvent';
 import { InvoiceUploadedEvent } from './messages/InvoiceUploadedEvent';
 import { MistralaiService } from './mistralai.service';
-import { LoggerWithOTEL } from 'src/logger';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -81,7 +82,6 @@ export class InvoiceController {
       filePath,
       _meta: tracingContext,
     });
-    this.natsClient.emit(InvoiceUploadedEvent.event_name, event);
 
     await this.invoiceService.create({
       id: event.invoiceId,
@@ -89,6 +89,8 @@ export class InvoiceController {
       filePath,
       user: { id: userId },
     });
+
+    this.natsClient.emit(InvoiceUploadedEvent.event_name, event);
     return {
       message: 'File uploaded successfully',
     };
@@ -116,12 +118,25 @@ export class InvoiceController {
   @Public()
   @EventPattern(InvoiceUploadedEvent.event_name)
   async handleInvoiceUploadedEvent(event: InvoiceUploadedEvent) {
-    const activeContext = propagation.extract(context.active(), event._meta);
-    await context.with(
-      activeContext,
-      this._handleInvoiceUploadedEvent.bind(this),
-      this,
-      event,
-    );
+    try {
+      const activeContext = propagation.extract(context.active(), event._meta);
+      await context.with(
+        activeContext,
+        this._handleInvoiceUploadedEvent.bind(this),
+        this,
+        event,
+      );
+    } catch (error) {
+      await this.invoiceService.updateById(event.invoiceId, {
+        status: InvoiceStatus.FAILED,
+      });
+      this.logger.error(
+        `Invoice OCR failed for invoice ${event.invoiceId}: ${error}`,
+      );
+      this.natsClient.emit(
+        InvoiceOcrFailedEvent.event_name,
+        new InvoiceOcrFailedEvent(event.invoiceId, (error as Error).message),
+      );
+    }
   }
 }

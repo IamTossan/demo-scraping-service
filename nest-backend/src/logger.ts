@@ -39,4 +39,16 @@ export class LoggerWithOTEL extends ConsoleLogger {
     });
     super.log(message, ...rest);
   }
+
+  error(message: unknown, ...rest: [...any]): void {
+    this.logger.emit({
+      severityNumber: SeverityNumber.ERROR,
+      severityText: 'ERROR',
+      body: message as AnyValue,
+      attributes: {
+        context: this.context,
+      },
+    });
+    super.error(message, ...rest);
+  }
 }
