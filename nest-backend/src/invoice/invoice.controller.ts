@@ -7,11 +7,11 @@ import {
   Patch,
   Post,
   Req,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { ClientProxy, EventPattern } from '@nestjs/microservices';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { context, propagation } from '@opentelemetry/api';
 import type { Request } from 'express';
@@ -63,36 +63,59 @@ export class InvoiceController {
     return { message: 'ok' };
   }
 
+  async uploadInvoice(
+    userId: string,
+    file: Express.Multer.File,
+    tracingContext: Record<string, string>,
+  ): Promise<[null, null] | [null, Error]> {
+    try {
+      const filePath = await this.blockStorageService.upload(file);
+      const event = new InvoiceUploadedEvent({
+        userId,
+        filePath,
+        _meta: tracingContext,
+      });
+
+      await this.invoiceService.create({
+        id: event.invoiceId,
+        fileName: file.originalname,
+        filePath,
+        user: { id: userId },
+      });
+
+      this.natsClient.emit(InvoiceUploadedEvent.event_name, event);
+      return [null, null];
+    } catch (error) {
+      this.logger.error(
+        `Error uploading invoice ${file.originalname}: ${(error as Error).message}`,
+      );
+      return [null, error as Error];
+    }
+  }
+
   @ApiConsumes('multipart/form-data')
   @ApiBody({ description: 'An invoice file to upload, in pdf format' })
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(AnyFilesInterceptor())
   async getData(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
     @Req() req: Request,
   ): Promise<{
     message: string;
   }> {
     const userId = req.user!.sub;
-    const filePath = await this.blockStorageService.upload(file);
     const tracingContext = {};
     propagation.inject(context.active(), tracingContext);
-    const event = new InvoiceUploadedEvent({
-      userId,
-      filePath,
-      _meta: tracingContext,
-    });
 
-    await this.invoiceService.create({
-      id: event.invoiceId,
-      fileName: file.originalname,
-      filePath,
-      user: { id: userId },
-    });
+    const res = await Promise.all(
+      files.map((file) => this.uploadInvoice(userId, file, tracingContext)),
+    );
 
-    this.natsClient.emit(InvoiceUploadedEvent.event_name, event);
+    if (res.some(([, e]) => e)) {
+      return { message: 'Error uploading file(s)' };
+    }
     return {
-      message: 'File uploaded successfully',
+      message: 'File(s) uploaded successfully',
     };
   }
 

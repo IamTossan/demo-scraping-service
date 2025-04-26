@@ -38,8 +38,7 @@ export default function Header() {
     e.preventDefault();
 
     const fileInput = e.currentTarget.elements[0] as HTMLInputElement;
-    const file = fileInput.files?.[0];
-    if (!file) return;
+    if (!fileInput.files?.length) return;
 
     await timeout(750);
     setIsDialogOpen(false);
@@ -55,7 +54,9 @@ export default function Header() {
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+    for (const file of fileInput.files) {
+      formData.append("file", file);
+    }
     const res = await fetch("http://localhost:3000/invoice/upload", {
       method: "POST",
       headers: {
@@ -123,7 +124,7 @@ export default function Header() {
             encType="multipart/form-data"
             onSubmit={handleSubmit}
           >
-            <Input id="file" name="file" type="file" />
+            <Input id="file" name="file" type="file" multiple />
             <DialogFooter className="mt-4">
               <Button type="submit">Envoyer</Button>
             </DialogFooter>
