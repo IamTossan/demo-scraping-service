@@ -14,6 +14,7 @@ import { ClientProxy, EventPattern } from '@nestjs/microservices';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { context, propagation } from '@opentelemetry/api';
+import { backOff } from 'exponential-backoff';
 import type { Request } from 'express';
 import { Public } from 'src/auth.guard';
 import { LoggerWithOTEL } from 'src/logger';
@@ -126,7 +127,19 @@ export class InvoiceController {
 
     const blob = await this.blockStorageService.download(event.filePath);
     const signedUrl = await this.mistralaiService.uploadFile(blob);
-    const extract = await this.mistralaiService.processFile(signedUrl);
+
+    const extract = await backOff(
+      async () => this.mistralaiService.processFile(signedUrl),
+      {
+        jitter: 'full',
+        retry: (e: Error, attempt: number) => {
+          this.logger.warn(
+            `Error processing file ${event.filePath} (attempt ${attempt}): ${e.message}`,
+          );
+          return true;
+        },
+      },
+    );
 
     await this.invoiceService.updateById(event.invoiceId, {
       ...extract,
