@@ -1,16 +1,43 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Form, Link, redirect, UIMatch, useLoaderData } from "@remix-run/react";
-import { useRef } from "react";
+import {
+  Link,
+  redirect,
+  UIMatch,
+  useLoaderData,
+  useSubmit,
+} from "@remix-run/react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "~/components/ui/button";
+import { Calendar } from "~/components/ui/calendar";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import { getSupabaseServerClient } from "~/lib/supabase-server";
+import { cn } from "~/lib/utils";
 import type { Invoice } from "~/types/invoice";
 
 export const loader = async ({
   params,
   request,
-}: LoaderFunctionArgs): Promise<{ invoice: Invoice }> => {
+}: LoaderFunctionArgs): Promise<{
+  invoice: Extract<Invoice, { status: "COMPLETED" }>;
+}> => {
   const { supabase } = getSupabaseServerClient(
     request.headers.get("Cookie") ?? "",
   );
@@ -31,6 +58,9 @@ export const loader = async ({
   if (!getInvoiceRes.ok) throw new Response("Not Found", { status: 404 });
 
   const invoice = (await getInvoiceRes.json()) as Invoice;
+  if (invoice.status !== "COMPLETED") {
+    throw redirect("/invoices", { status: 302 });
+  }
 
   return { invoice };
 };
@@ -56,7 +86,7 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       delete payload[k];
     }
   });
-  await fetch(`http://localhost:3000/invoice/${id}`, {
+  const res = await fetch(`http://localhost:3000/invoice/${id}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -64,6 +94,12 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     },
     body: JSON.stringify(payload),
   });
+  if (res.status !== 200) {
+    const err = await res.json();
+    throw new Response(`${err.error}: ${err.message}`, {
+      status: err.statusCode,
+    });
+  }
   return redirect("/");
 };
 
@@ -73,16 +109,40 @@ export const handle = {
   ),
 };
 
+const schema = z.object({
+  invoiceDate: z.coerce.date(),
+  supplier: z.string().min(2).max(100),
+  description: z.string().min(2).max(100),
+  amountExclTax: z.coerce.number().min(0),
+  amountTax: z.coerce.number().min(0),
+  amountTotal: z.coerce.number().min(0),
+});
+
 export default function Invoice() {
   const { invoice } = useLoaderData<typeof loader>();
-  const formRef = useRef(null);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const submit = useSubmit();
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      invoiceDate: invoice.invoiceDate || new Date(),
+      supplier: invoice.supplier || "",
+      description: invoice.description || "",
+      amountExclTax: invoice.amountExclTax || 0,
+      amountTotal: invoice.amountTotal || 0,
+      amountTax: invoice.amountTax || 0,
+    },
+  });
 
-  const resetForm = () => {
-    if (!formRef.current) {
-      return;
-    }
-    formRef.current.elements.supplier.value = invoice.supplier;
-    formRef.current.elements.description.value = invoice.description;
+  const onReset = () => {
+    form.reset(invoice);
+  };
+
+  const onSubmit = (values: z.infer<typeof schema>) => {
+    submit(
+      { ...values, invoiceDate: format(values.invoiceDate, "yyyy-MM-dd") },
+      { method: "post" },
+    );
   };
 
   return (
@@ -98,77 +158,146 @@ export default function Invoice() {
         </object>
       </div>
       <div className="w-1/3 max-w-md">
-        <Form
-          className="flex flex-col items-center h-full gap-4 px-8 py-4 border"
-          method="patch"
-          ref={formRef}
-        >
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="supplier">Fournisseur</Label>
-            <Input
-              className="text-right"
-              type="text"
-              id="supplier"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
               name="supplier"
-              value={invoice.supplier}
+              render={({ field: { ref, ...field } }) => (
+                <FormItem>
+                  <FormLabel>Fournisseur</FormLabel>
+                  <FormControl>
+                    <Input placeholder="fournisseur" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="description">Nature de la dépense</Label>
-            <Input
-              className="text-right"
-              type="text"
-              id="description"
+            <FormField
+              control={form.control}
               name="description"
-              value={invoice.description}
+              render={({ field: { ref, ...field } }) => (
+                <FormItem>
+                  <FormLabel>Nature de la dépense</FormLabel>
+                  <FormControl>
+                    <Input placeholder="nature de la dépense" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="description">Date de la facture</Label>
-            <Input
-              className="text-right"
-              type="date"
-              id="invoiceDate"
+            <FormField
+              control={form.control}
               name="invoiceDate"
-              value={invoice.invoiceDate}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date de la facture</FormLabel>
+                  <Popover
+                    open={isDatePickerOpen}
+                    onOpenChange={setIsDatePickerOpen}
+                  >
+                    <PopoverTrigger
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsDatePickerOpen(!isDatePickerOpen);
+                      }}
+                    >
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                          if (date) {
+                            form.setValue("invoiceDate", date);
+                          }
+                          setIsDatePickerOpen(false);
+                        }}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("1900-01-01")
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="amountExclTax">Montant HT</Label>
-            <Input
-              className="text-right"
-              type="number"
-              id="amountExclTax"
+            <FormField
+              control={form.control}
               name="amountExclTax"
-              value={invoice.amountExclTax}
+              render={({ field: { ref, ...field } }) => (
+                <FormItem>
+                  <FormLabel>Montant hors taxe</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="montant hors taxe"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="amountTax">Montant TVA</Label>
-            <Input
-              className="text-right"
-              type="number"
-              id="amountTax"
+            <FormField
+              control={form.control}
               name="amountTax"
-              value={invoice.amountTax}
+              render={({ field: { ref, ...field } }) => (
+                <FormItem>
+                  <FormLabel>Montant taxe</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="montant taxe"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="amountTotal">Montant TTC</Label>
-            <Input
-              className="text-right"
-              type="number"
-              id="amountTotal"
+            <FormField
+              control={form.control}
               name="amountTotal"
-              value={invoice.amountTotal}
+              render={({ field: { ref, ...field } }) => (
+                <FormItem>
+                  <FormLabel>Montant total</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="montant total"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="flex self-end gap-2">
-            <Button onClick={resetForm} variant="secondary" type="reset">
-              Reset
-            </Button>
-            <Button type="submit">Update</Button>
-          </div>
+            <div className="flex self-end gap-2">
+              <Button onClick={onReset} variant="secondary" type="reset">
+                Reset
+              </Button>
+              <Button type="submit">Update</Button>
+            </div>
+          </form>
         </Form>
       </div>
     </div>

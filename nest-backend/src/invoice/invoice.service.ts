@@ -25,7 +25,10 @@ export class InvoiceService {
   }
 
   async findAllByUserId(userId: string): Promise<Invoice[]> {
-    return this.invoiceRepository.findBy({ user: { id: userId } });
+    return this.invoiceRepository.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findOne(id: string): Promise<Invoice> {
