@@ -26,6 +26,7 @@ import { InvoiceOcrFailedEvent } from './messages/InvoiceOcrFailedEvent';
 import { InvoiceOcrFinishedEvent } from './messages/InvoiceOcrFinishedEvent';
 import { InvoiceUploadedEvent } from './messages/InvoiceUploadedEvent';
 import { MistralaiService } from './mistralai.service';
+import { throttle } from 'src/utils';
 
 @Controller('invoice')
 export class InvoiceController {
@@ -68,7 +69,7 @@ export class InvoiceController {
     userId: string,
     file: Express.Multer.File,
     tracingContext: Record<string, string>,
-  ): Promise<[null, null] | [null, Error]> {
+  ): Promise<[InvoiceUploadedEvent, null] | [null, Error]> {
     try {
       const filePath = await this.blockStorageService.upload(file);
       const event = new InvoiceUploadedEvent({
@@ -84,8 +85,7 @@ export class InvoiceController {
         user: { id: userId },
       });
 
-      this.natsClient.emit(InvoiceUploadedEvent.event_name, event);
-      return [null, null];
+      return [event, null];
     } catch (error) {
       this.logger.error(
         `Error uploading invoice ${file.originalname}: ${(error as Error).message}`,
@@ -112,9 +112,22 @@ export class InvoiceController {
       files.map((file) => this.uploadInvoice(userId, file, tracingContext)),
     );
 
-    if (res.some(([, e]) => e)) {
+    const failCount = res.filter(([, e]) => e).length;
+    if (failCount > 0) {
       return { message: 'Error uploading file(s)' };
     }
+
+    const events: InvoiceUploadedEvent[] = res
+      .map(([e]) => e)
+      .filter((e) => e !== null);
+    // we throttle the events to mitigate the mistralai 1 req/s rate limit
+    await throttle(
+      events.map(
+        (e) => () => this.natsClient.emit(InvoiceUploadedEvent.event_name, e),
+      ),
+      1000,
+    );
+
     return {
       message: 'File(s) uploaded successfully',
     };

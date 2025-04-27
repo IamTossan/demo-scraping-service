@@ -45,7 +45,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function InvoicesLayout() {
   return (
-    <div className="flex h-screen flex-col items-center justify-start gap-4">
+    <div className="flex h-screen flex-col items-center justify-between gap-2 pb-2">
       <Header />
       <Outlet />
     </div>

@@ -35,7 +35,7 @@ export class Invoice extends BaseEntity {
   })
   status: InvoiceStatus;
 
-  @Column({ nullable: true })
+  @Column('date', { nullable: true })
   invoiceDate: string;
 
   @Column({ nullable: true })

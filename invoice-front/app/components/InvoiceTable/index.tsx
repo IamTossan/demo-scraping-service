@@ -23,17 +23,20 @@ interface DataTableProps<TData> {
   }[keyof TData][];
   data: TData[];
   className?: React.ComponentProps<"div">["className"];
+  style?: React.ComponentProps<"div">["style"];
 }
 
 export function DataTable<TData>({
   columns,
   data,
   className,
+  style,
 }: DataTableProps<TData>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableHiding: false,
   });
 
   return (
@@ -41,6 +44,7 @@ export function DataTable<TData>({
       className={
         className ? cn(className, "rounded-md border") : "rounded-md border"
       }
+      style={style}
     >
       <Table>
         <TableHeader>

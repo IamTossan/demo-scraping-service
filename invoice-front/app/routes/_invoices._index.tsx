@@ -97,7 +97,10 @@ export default function Index() {
 
   const filename = `export_factures_${new Date().toISOString()}.csv`;
   return (
-    <div className="flex flex-col items-center justify-between h-auto w-full gap-2 px-4">
+    <div
+      className="flex flex-col items-center justify-between w-full gap-2 px-4"
+      style={{ height: "calc(100% - 144px)" }}
+    >
       <Button className="self-end">
         <CSVLink
           data={Object.values(invoices)}
@@ -109,7 +112,8 @@ export default function Index() {
         </CSVLink>
       </Button>
       <DataTable
-        className="w-full h-auto mx-4 mb-4"
+        className="w-full mx-4 mb-2 h-full"
+        style={{ height: "calc(100% - 44px)" }}
         columns={columns}
         data={Object.values(invoices)}
       />

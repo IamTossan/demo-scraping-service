@@ -35,7 +35,7 @@ export class MistralaiService {
           content: [
             {
               type: 'text',
-              text: 'Voici un fichier PDF, peux-tu extraire la date de la facture, le nom du fournisseur, la nature de la dépense, le montant hors taxe, le montant total, le montant TVA, le montant TTC?',
+              text: 'Voici un fichier PDF, peux-tu extraire la date de la facture en format ISO, le nom du fournisseur, la nature de la dépense, le montant hors taxe, le montant total, le montant TVA, le montant TTC?',
             },
             {
               type: 'document_url',

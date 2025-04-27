@@ -110,7 +110,7 @@ export default function Invoice() {
               type="text"
               id="supplier"
               name="supplier"
-              placeholder={invoice.supplier}
+              value={invoice.supplier}
             />
           </div>
           <div className="grid w-full max-w-sm items-center gap-1.5">
@@ -120,10 +120,49 @@ export default function Invoice() {
               type="text"
               id="description"
               name="description"
-              placeholder={invoice.description}
+              value={invoice.description}
             />
           </div>
-
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <Label htmlFor="description">Date de la facture</Label>
+            <Input
+              className="text-right"
+              type="date"
+              id="invoiceDate"
+              name="invoiceDate"
+              value={invoice.invoiceDate}
+            />
+          </div>
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <Label htmlFor="amountExclTax">Montant HT</Label>
+            <Input
+              className="text-right"
+              type="number"
+              id="amountExclTax"
+              name="amountExclTax"
+              value={invoice.amountExclTax}
+            />
+          </div>
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <Label htmlFor="amountTax">Montant TVA</Label>
+            <Input
+              className="text-right"
+              type="number"
+              id="amountTax"
+              name="amountTax"
+              value={invoice.amountTax}
+            />
+          </div>
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <Label htmlFor="amountTotal">Montant TTC</Label>
+            <Input
+              className="text-right"
+              type="number"
+              id="amountTotal"
+              name="amountTotal"
+              value={invoice.amountTotal}
+            />
+          </div>
           <div className="flex self-end gap-2">
             <Button onClick={resetForm} variant="secondary" type="reset">
               Reset

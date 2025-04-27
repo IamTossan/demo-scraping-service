@@ -6,9 +6,23 @@ import { Invoice } from "~/types/invoice";
 import { Button } from "../ui/button";
 
 export const columns: ColumnDef<Invoice>[] = [
+  // {
+  //   accessorKey: "fileName",
+  //   header: "Nom du fichier",
+  // },
   {
-    accessorKey: "fileName",
-    header: "Nom du fichier",
+    accessorKey: "createdAt",
+    header: "Date de création",
+    cell: ({ row }) => {
+      const createdAt = row.original.createdAt;
+      return (
+        <>
+          {new Date(createdAt).toLocaleString("fr-FR", {
+            timeZone: "Europe/Paris",
+          })}
+        </>
+      );
+    },
   },
   {
     accessorKey: "status",
@@ -28,21 +42,6 @@ export const columns: ColumnDef<Invoice>[] = [
       }
     },
   },
-
-  {
-    accessorKey: "createdAt",
-    header: "Date de création",
-    cell: ({ row }) => {
-      const createdAt = row.original.createdAt;
-      return (
-        <>
-          {new Date(createdAt).toLocaleString("fr-FR", {
-            timeZone: "Europe/Paris",
-          })}
-        </>
-      );
-    },
-  },
   {
     accessorKey: "supplier",
     header: "Fournisseur",
@@ -53,13 +52,7 @@ export const columns: ColumnDef<Invoice>[] = [
     cell: ({ row }) => {
       const invoiceDate = row.original.invoiceDate;
       if (!invoiceDate) return <></>;
-      return (
-        <>
-          {new Date(invoiceDate).toLocaleString("fr-FR", {
-            timeZone: "Europe/Paris",
-          })}
-        </>
-      );
+      return <>{invoiceDate}</>;
     },
   },
   {
