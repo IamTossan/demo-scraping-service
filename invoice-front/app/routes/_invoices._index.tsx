@@ -57,6 +57,7 @@ const CSV_HEADERS = [
 export default function Index() {
   const loadedInvoices = useLoaderData<typeof loader>();
   const supabase = useSupabase();
+  const [selectedInvoices, setSelectedInvoices] = useState<Invoice[]>([]);
   const [invoices, setInvoices] = useState(() =>
     loadedInvoices.reduce(
       (acc, cur) => {
@@ -103,7 +104,7 @@ export default function Index() {
     >
       <Button className="self-end">
         <CSVLink
-          data={Object.values(invoices)}
+          data={selectedInvoices}
           headers={CSV_HEADERS}
           filename={filename}
           suppressHydrationWarning={true}
@@ -116,6 +117,7 @@ export default function Index() {
         style={{ height: "calc(100% - 44px)" }}
         columns={columns}
         data={Object.values(invoices)}
+        onSelectionChange={setSelectedInvoices}
       />
     </div>
   );

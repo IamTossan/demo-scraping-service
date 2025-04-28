@@ -6,6 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useEffect, useState } from "react";
 
 import {
   Table,
@@ -22,6 +23,7 @@ interface DataTableProps<TData> {
     [K in keyof Required<TData>]: ColumnDef<TData, TData[K]>;
   }[keyof TData][];
   data: TData[];
+  onSelectionChange: (selectedRows: TData[]) => void;
   className?: React.ComponentProps<"div">["className"];
   style?: React.ComponentProps<"div">["style"];
 }
@@ -29,15 +31,25 @@ interface DataTableProps<TData> {
 export function DataTable<TData>({
   columns,
   data,
+  onSelectionChange,
   className,
   style,
 }: DataTableProps<TData>) {
+  const [rowSelection, setRowSelection] = useState({});
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     enableHiding: false,
+    onRowSelectionChange: setRowSelection,
+    state: { rowSelection },
   });
+
+  useEffect(() => {
+    onSelectionChange(
+      table.getFilteredSelectedRowModel().rows.map((row) => row.original),
+    );
+  }, [rowSelection, onSelectionChange, table]);
 
   return (
     <div
